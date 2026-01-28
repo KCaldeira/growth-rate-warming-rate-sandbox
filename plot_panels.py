@@ -87,6 +87,8 @@ def create_panel_plot(growth_rates, label_style='numerical'):
     for col, (income_idx, income_label) in enumerate(income_groups):
         # Top row: Warming (x) vs Growth rate (y)
         ax_top = axes[0, col]
+        top_label_positions = []  # Store (y_position, label_text, color) for label adjustment
+
         for ssp_idx, ssp_name in enumerate(SSP_NAMES):
             color = SSP_COLORS[ssp_name]
             x_data = np.array(WARMING_VALUES)
@@ -102,14 +104,27 @@ def create_panel_plot(growth_rates, label_style='numerical'):
                 marker = WARMING_MARKERS[warm_name]
                 ax_top.scatter(x_data[warm_idx], y_data[warm_idx], c=color, marker=marker, s=60, zorder=2)
 
-            # Add label at the end of the line
+            # Store label position for later adjustment
             y_label = slope * x_max_warming + intercept
             if label_style == 'scenario':
                 label_text = ssp_name
             else:
                 baseline_rate = SSP_VALUES[ssp_idx]
                 label_text = f'{baseline_rate:.2f}'
-            ax_top.text(x_max_warming + 0.1, y_label, label_text, color=color,
+            top_label_positions.append((y_label, label_text, color))
+
+        # Adjust label positions to avoid overlap (minimum spacing of 0.25)
+        top_label_positions.sort(key=lambda x: x[0])  # Sort by y position
+        min_spacing = 0.25
+        adjusted_positions = []
+        for i, (y_pos, text, color) in enumerate(top_label_positions):
+            if i > 0 and y_pos - adjusted_positions[-1] < min_spacing:
+                y_pos = adjusted_positions[-1] + min_spacing
+            adjusted_positions.append(y_pos)
+
+        # Add labels with adjusted positions
+        for (orig_y, label_text, color), adj_y in zip(top_label_positions, adjusted_positions):
+            ax_top.text(x_max_warming + 0.1, adj_y, label_text, color=color,
                         fontsize=9, va='center', ha='left')
 
         # Add header label for numerical style only
@@ -123,7 +138,7 @@ def create_panel_plot(growth_rates, label_style='numerical'):
         x_highlight = WARMING_VALUES[rcp45_idx]
         y_highlight = data_subset[income_idx, ssp2_idx, rcp45_idx]
         ax_top.scatter(x_highlight, y_highlight, facecolors='none', edgecolors='black',
-                       marker='s', s=120, linewidths=1.5, zorder=3)
+                       marker='s', s=80, linewidths=1.5, zorder=3)
 
         ax_top.set_xlim(0, x_max_warming + 1.0)  # Extra space for labels
         ax_top.set_ylim(y_min, y_max)
@@ -172,7 +187,7 @@ def create_panel_plot(growth_rates, label_style='numerical'):
         x_highlight = SSP_VALUES[ssp2_idx]
         y_highlight = data_subset[income_idx, ssp2_idx, rcp45_idx]
         ax_bot.scatter(x_highlight, y_highlight, facecolors='none', edgecolors='black',
-                       marker='s', s=120, linewidths=1.5, zorder=3)
+                       marker='s', s=80, linewidths=1.5, zorder=3)
 
         # Adjust label positions to avoid overlap (minimum spacing of 0.25)
         label_positions.sort(key=lambda x: x[0])  # Sort by y position
