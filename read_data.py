@@ -53,6 +53,32 @@ def read_figure_data(filepath):
     return data
 
 
+def compute_growth_rates(data, years=80):
+    """
+    Transform per-capita GDP data into fractional average annual growth rates.
+
+    For each income group layer:
+        1. Divide all values by the [0,0] element (No growth, No warming baseline)
+        2. Take the nth root (where n = years) to get average annual multiplier
+        3. Subtract 1.0 to get fractional growth rate
+
+    Args:
+        data: numpy array of shape (4, 6, 5) with per-capita GDP values
+        years: number of years over which growth occurred (default 80)
+
+    Returns:
+        numpy.ndarray: Shape (4, 6, 5) containing fractional annual growth rates
+    """
+    growth_rates = np.zeros_like(data)
+
+    for i in range(data.shape[0]):
+        baseline = data[i, 0, 0]  # No growth, No warming value for this income group
+        normalized = data[i] / baseline
+        growth_rates[i] = normalized ** (1.0 / years) - 1.0
+
+    return growth_rates
+
+
 if __name__ == "__main__":
     # Read the data
     data = read_figure_data("data/input/figure_data.txt")
@@ -63,5 +89,15 @@ if __name__ == "__main__":
     print(f"Column labels: {COL_LABELS}")
 
     # Example: print the All-country average table
-    print(f"\n{TABLE_NAMES[0]}:")
+    print(f"\n{TABLE_NAMES[0]} (per-capita GDP):")
     print(data[0])
+
+    # Compute growth rates
+    growth_rates = compute_growth_rates(data)
+
+    print(f"\n{TABLE_NAMES[0]} (fractional annual growth rates):")
+    print(growth_rates[0])
+
+    # Show as percentages for readability
+    print(f"\n{TABLE_NAMES[0]} (percent annual growth rates):")
+    print(growth_rates[0] * 100)
