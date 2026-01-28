@@ -14,7 +14,8 @@ python create_plots_xlsx.py
 Running `create_plots_xlsx.py` generates:
 
 - `data/output/growth_rates.xlsx` - Fractional annual growth rates (4 sheets by income group)
-- `data/output/panel_plot.png` - 2x2 panel visualization comparing low vs high income countries
+- `data/output/panel_plot.png` - 2x2 panel visualization with numerical labels (%/yr, °C/century)
+- `data/output/panel_plot_scenario.png` - 2x2 panel visualization with scenario labels (SSP1-5, RCP2.6-8.5)
 
 ## Input Data
 

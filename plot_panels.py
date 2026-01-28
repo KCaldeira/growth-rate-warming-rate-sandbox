@@ -22,6 +22,9 @@ WARMING_LEVELS = {
 WARMING_NAMES = ["2.6 W m-2", "4.5 W m-2", "7.0 W m-2", "8.5 W m-2"]
 WARMING_VALUES = [WARMING_LEVELS[w] for w in WARMING_NAMES]  # [0.87, 2.27, 3.96, 5.10]
 
+# RCP names corresponding to warming scenarios
+RCP_NAMES = ["RCP2.6", "RCP4.5", "RCP7.0", "RCP8.5"]
+
 # Colors for SSP scenarios
 SSP_COLORS = {
     "SSP1": "tab:blue",
@@ -44,7 +47,7 @@ LOW_INCOME_IDX = 3   # "Low-income group"
 HIGH_INCOME_IDX = 1  # "High-income group"
 
 
-def create_panel_plot(growth_rates):
+def create_panel_plot(growth_rates, label_style='numerical'):
     """
     Create a 2x2 panel scatter plot.
 
@@ -53,6 +56,10 @@ def create_panel_plot(growth_rates):
         Right column: High-income countries
         Top row: Warming rate (x) vs GDP growth rate (y)
         Bottom row: Baseline growth rate (x) vs GDP growth rate (y)
+
+    Args:
+        growth_rates: numpy array of shape (4, 6, 5) with growth rate data
+        label_style: 'numerical' for growth rates/warming values, 'scenario' for SSP/RCP names
     """
     fig, axes = plt.subplots(2, 2, figsize=(10, 8))
 
@@ -95,15 +102,28 @@ def create_panel_plot(growth_rates):
                 marker = WARMING_MARKERS[warm_name]
                 ax_top.scatter(x_data[warm_idx], y_data[warm_idx], c=color, marker=marker, s=60, zorder=2)
 
-            # Add label at the end of the line (use numerical baseline growth rate)
+            # Add label at the end of the line
             y_label = slope * x_max_warming + intercept
-            baseline_rate = SSP_VALUES[ssp_idx]
-            ax_top.text(x_max_warming + 0.1, y_label, f'{baseline_rate:.2f}', color=color,
+            if label_style == 'scenario':
+                label_text = ssp_name
+            else:
+                baseline_rate = SSP_VALUES[ssp_idx]
+                label_text = f'{baseline_rate:.2f}'
+            ax_top.text(x_max_warming + 0.1, y_label, label_text, color=color,
                         fontsize=9, va='center', ha='left')
 
-        # Add header label for the column of numbers
-        ax_top.text(x_max_warming + 0.1, y_max - 0.15, '%/yr', color='black',
-                    fontsize=9, va='top', ha='left')
+        # Add header label for numerical style only
+        if label_style == 'numerical':
+            ax_top.text(x_max_warming + 0.1, y_max - 0.15, '%/yr', color='black',
+                        fontsize=9, va='top', ha='left')
+
+        # Highlight SSP2/RCP4.5 (SSP245) as central scenario with black square border
+        ssp2_idx = 1  # SSP2
+        rcp45_idx = 1  # RCP4.5 (4.5 W m-2) uses square marker
+        x_highlight = WARMING_VALUES[rcp45_idx]
+        y_highlight = data_subset[income_idx, ssp2_idx, rcp45_idx]
+        ax_top.scatter(x_highlight, y_highlight, facecolors='none', edgecolors='black',
+                       marker='s', s=120, linewidths=1.5, zorder=3)
 
         ax_top.set_xlim(0, x_max_warming + 1.0)  # Extra space for labels
         ax_top.set_ylim(y_min, y_max)
@@ -129,10 +149,13 @@ def create_panel_plot(growth_rates):
             y_fit = slope * x_fit_growth + intercept
             ax_bot.plot(x_fit_growth, y_fit, color='lightgray', linewidth=1, zorder=1)
 
-            # Store label position with numerical warming value
+            # Store label position with warming value or RCP name
             y_label = slope * x_max_growth + intercept
-            warming_value = WARMING_VALUES[warm_idx]
-            label_positions.append((y_label, warming_value))
+            if label_style == 'scenario':
+                label_text = RCP_NAMES[warm_idx]
+            else:
+                label_text = f'{WARMING_VALUES[warm_idx]:.2f}'
+            label_positions.append((y_label, label_text))
 
         # Plot scatter points (drawn over lines)
         for ssp_idx, ssp_name in enumerate(SSP_NAMES):
@@ -143,6 +166,14 @@ def create_panel_plot(growth_rates):
                 y = data_subset[income_idx, ssp_idx, warm_idx]
                 ax_bot.scatter(x_base, y, c=color, marker=marker, s=60, zorder=2)
 
+        # Highlight SSP2/RCP4.5 (SSP245) as central scenario with black square border
+        ssp2_idx = 1  # SSP2
+        rcp45_idx = 1  # RCP4.5 (4.5 W m-2) uses square marker
+        x_highlight = SSP_VALUES[ssp2_idx]
+        y_highlight = data_subset[income_idx, ssp2_idx, rcp45_idx]
+        ax_bot.scatter(x_highlight, y_highlight, facecolors='none', edgecolors='black',
+                       marker='s', s=120, linewidths=1.5, zorder=3)
+
         # Adjust label positions to avoid overlap (minimum spacing of 0.25)
         label_positions.sort(key=lambda x: x[0])  # Sort by y position
         min_spacing = 0.25
@@ -152,17 +183,21 @@ def create_panel_plot(growth_rates):
                 y_pos = adjusted_positions[-1] + min_spacing
             adjusted_positions.append(y_pos)
 
-        # Add labels with adjusted positions (numerical warming values)
-        for (orig_y, warming_value), adj_y in zip(label_positions, adjusted_positions):
-            ax_bot.text(x_max_growth + 0.05, adj_y, f'{warming_value:.2f}', color='black',
+        # Add labels with adjusted positions
+        for (orig_y, label_text), adj_y in zip(label_positions, adjusted_positions):
+            ax_bot.text(x_max_growth + 0.05, adj_y, label_text, color='black',
                         fontsize=8, va='center', ha='left')
 
-        # Add header label just above the highest number label
-        header_y = max(adjusted_positions) + 0.35
-        ax_bot.text(x_max_growth + 0.05, header_y, '°C/century', color='black',
-                    fontsize=8, va='bottom', ha='left')
+        # Add header label just above the highest number label (numerical style only)
+        if label_style == 'numerical':
+            header_y = max(adjusted_positions) + 0.35
+            ax_bot.text(x_max_growth + 0.05, header_y, '°C/century', color='black',
+                        fontsize=8, va='bottom', ha='left')
 
-        ax_bot.set_xlim(0, x_max_growth + 1.2)  # Extra space for labels
+        if label_style == 'numerical':
+            ax_bot.set_xlim(0, x_max_growth + 1.2)  # Extra space for labels
+        else:
+            ax_bot.set_xlim(0, 3.5)
         ax_bot.set_ylim(y_min, y_max)
         ax_bot.set_xticks([0, 1, 2, 3])
         ax_bot.set_yticks([-1, 0, 1, 2, 3, 4, 5])

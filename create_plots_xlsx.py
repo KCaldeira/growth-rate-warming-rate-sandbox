@@ -3,14 +3,15 @@
 Generate growth rate analysis outputs.
 
 This script reads economic projection data, computes growth rates,
-and generates both an Excel file and a 2x2 panel visualization.
+and generates an Excel file and two 2x2 panel visualizations.
 
 Usage:
     python create_plots_xlsx.py
 
 Outputs:
-    data/output/growth_rates.xlsx - Growth rates by income group
-    data/output/panel_plot.png    - 2x2 panel visualization
+    data/output/growth_rates.xlsx      - Growth rates by income group
+    data/output/panel_plot.png         - Panel plot with numerical labels
+    data/output/panel_plot_scenario.png - Panel plot with SSP/RCP labels
 """
 
 import os
@@ -42,11 +43,18 @@ def main():
             df.to_excel(writer, sheet_name=sheet_name)
     print("  Saved data/output/growth_rates.xlsx")
 
-    # Generate panel plot
-    print("Creating panel plot...")
-    fig, axes = create_panel_plot(growth_rates)
+    # Generate panel plot with numerical labels
+    print("Creating panel plots...")
+    fig, axes = create_panel_plot(growth_rates, label_style='numerical')
     plt.savefig("data/output/panel_plot.png", dpi=150, bbox_inches='tight')
     print("  Saved data/output/panel_plot.png")
+    plt.close(fig)
+
+    # Generate panel plot with SSP/RCP labels
+    fig, axes = create_panel_plot(growth_rates, label_style='scenario')
+    plt.savefig("data/output/panel_plot_scenario.png", dpi=150, bbox_inches='tight')
+    print("  Saved data/output/panel_plot_scenario.png")
+    plt.close(fig)
 
     print("Done.")
 
